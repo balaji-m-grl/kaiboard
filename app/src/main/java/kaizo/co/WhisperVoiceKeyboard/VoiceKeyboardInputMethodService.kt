@@ -119,6 +119,8 @@ class VoiceKeyboardInputMethodService : InputMethodService(), LifecycleOwner,
         private set
     var isRecording by mutableStateOf(false)
         private set
+    var isRefining by mutableStateOf(false)
+        private set
     private var modelsPath: File? = null
     private var samplesPath: File? = null
     private var sharedPref: SharedPreferences? = null
@@ -331,6 +333,79 @@ class VoiceKeyboardInputMethodService : InputMethodService(), LifecycleOwner,
 
     fun switchKeyboard() {
         switchToNextInputMethod(false)
+    }
+
+    fun refineText() = scope.launch {
+        if (isRefining) return@launch
+        isRefining = true
+        printMessage("Starting refinement...")
+        
+        try {
+            val llmUrlKey = application.getString(R.string.llm_url)
+            val defaultUrl = "http://10.0.2.2:11434/api/generate"
+            val urlStr = sharedPref?.getString(llmUrlKey, defaultUrl) ?: defaultUrl
+            val modelName = "llama3" // TODO: Make configurable
+
+            val ic = currentInputConnection ?: return@launch
+            
+            // Get text to refine (simple approach: get surrounding text)
+            // A more robust app would handle selection specifically, but this works for a quick demo
+            val before = ic.getTextBeforeCursor(2000, 0)?.toString() ?: ""
+            val after = ic.getTextAfterCursor(2000, 0)?.toString() ?: ""
+            val fullText = before + after
+            
+            if (fullText.isBlank()) {
+                printMessage("No text found to refine.")
+                isRefining = false
+                return@launch
+            }
+
+            val requestJson = org.json.JSONObject().apply {
+                put("model", modelName)
+                put("prompt", "Fix grammar and improve clarity in the following text. Output ONLY the improved text, no intro/outro:\n\n$fullText")
+                put("stream", false)
+            }
+            
+            printMessage("Sending to LLM: $urlStr")
+
+            withContext(Dispatchers.IO) {
+                val url = java.net.URL(urlStr)
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json")
+                
+                conn.outputStream.use { os ->
+                    val input = requestJson.toString().toByteArray()
+                    os.write(input, 0, input.size)
+                }
+
+                if (conn.responseCode == 200) {
+                   val response = conn.inputStream.bufferedReader().use { it.readText() }
+                   val jsonResponse = org.json.JSONObject(response)
+                   // Ollama returns "response", OpenAI uses "choices[0].message.content"
+                   // We'll support Ollama primarily as it's "local" default
+                   val refined = jsonResponse.optString("response")
+                   
+                   if (refined.isNotBlank()) {
+                       withContext(Dispatchers.Main) {
+                           // Replace text
+                           // Simple global replace for demo purposes: delete surrounding and insert new
+                           ic.deleteSurroundingText(before.length, after.length)
+                           ic.commitText(refined.trim(), 1)
+                           printMessage("Refinement complete.")
+                       }
+                   }
+                } else {
+                    printMessage("LLM Error: ${conn.responseCode}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "Refinement failed", e)
+            printMessage("Refinement error: ${e.message}")
+        } finally {
+            isRefining = false
+        }
     }
 }
 

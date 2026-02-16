@@ -30,4 +30,9 @@
     <string name="pause_media_option">Auto-pause Media</string>
     <string name="pause_media_description">Pauses media when recording.</string>
     <string name="casual_description">lowercase &amp; no ending ./,/;</string>
+    <string name="llm_url">llm_url</string>
+    <string name="llm_url_option">Local LLM URL</string>
+    <string name="llm_url_description">API URL (e.g. http://10.0.2.2:11434/api/generate)</string>
+    <string name="ai_button">Refine with AI</string>
+    <string name="refining">Refining...</string>
 </resources>

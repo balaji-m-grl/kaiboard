@@ -28,6 +28,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -89,6 +91,12 @@ private fun MainScreen(
     var pauseMedia by remember {
         mutableStateOf(
             sharedPref.getBoolean(pauseMediaStr, false)
+        )
+    }
+    val llmUrlKey = stringResource(R.string.llm_url)
+    var llmUrl by remember {
+        mutableStateOf(
+            sharedPref.getString(llmUrlKey, "http://10.0.2.2:11434/api/generate") ?: "http://10.0.2.2:11434/api/generate"
         )
     }
 
@@ -182,6 +190,26 @@ private fun MainScreen(
                         })
                     },
                     modifier = Modifier.fillMaxWidth()
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.llm_url_option)) },
+                    leadingContent = { Icon(Icons.Outlined.Memory, null) },
+                    supportingContent = {
+                        OutlinedTextField(
+                            value = llmUrl,
+                            onValueChange = {
+                                llmUrl = it
+                                with(sharedPref.edit()) {
+                                    putString(llmUrlKey, it)
+                                    apply()
+                                }
+                            },
+                        label = { Text(stringResource(R.string.llm_url_description)) },
+                        modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 )
             }
             item {

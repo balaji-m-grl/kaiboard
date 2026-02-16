@@ -108,6 +108,29 @@ class VoiceKeyboardView(private val service: VoiceKeyboardInputMethodService) :
                         )
                     }
                 }
+                // Refine Button
+                Button(
+                    onClick = { service.refineText() },
+                    enabled = !service.isRefining,
+                    modifier = Modifier
+                        .padding(padding)
+                        .defaultMinSize(minWidth = minSize),
+                    contentPadding = PaddingValues(horizontal = contentPad),
+                    shape = shape,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+                    )
+                ) {
+                    if (service.isRefining) {
+                         // Simple loading indicator text since CircularProgressIndicator takes space
+                         Text("...", fontSize = 16.sp)
+                    } else {
+                        Icon(
+                            Icons.Outlined.Star, // Using Star as "Magic" since AutoFix might need new dep
+                            stringResource(R.string.ai_button)
+                        )
+                    }
+                }
             }
         }
     }
